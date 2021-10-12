@@ -15,7 +15,16 @@ module.exports = {
   plugins: [
     '@semantic-release/commit-analyzer',
     '@semantic-release/release-notes-generator',
-    '@semantic-release/github',
+    [
+      '@semantic-release/github',
+      {
+        assets: [
+          { path: 'telegram-crypto-scraper-linux', label: 'Linux binary' },
+          { path: 'telegram-crypto-scraper-macos', label: 'Macos binary' },
+          { path: 'telegram-crypto-scraper-win.exe', label: 'Windows binary' }
+        ]
+      }
+    ],
     ['@semantic-release/changelog', { changelogFile: 'CHANGELOG.md', changelogTitle: '# Changelog' }],
     ['@semantic-release/git', { assets: ['CHANGELOG.md'] }]
   ]
