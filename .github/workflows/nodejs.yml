@@ -22,11 +22,20 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - name: install
+      - name: Install
         run: yarn install --frozen-lockfile --check-files
-      - name: build
+      - name: Build
         run: yarn build
-      - name: release
+      - name: Release
         run: yarn semantic-release
         env:
+          HUSKY: 0
+          CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload the artifacts
+        uses: skx/github-action-publish-binaries@release-1.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create_release.outputs.id }}
+          args: 'telegram-crypto-scraper*'
