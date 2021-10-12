@@ -5,7 +5,7 @@ import nodeResolve from '@rollup/plugin-node-resolve';
 import builtinModules from 'builtin-modules';
 import pkgJson from './package.json';
 
-export default function odpRollupConfig() {
+export default function rollupConfig() {
   const resolveOptions = {
     mainFields: ['jsnext:main', 'es2020', 'es2018', 'es2017', 'es2015', 'module', 'main'],
     preferBuiltins: true,
