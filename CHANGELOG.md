@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/d0whc3r/telegram-crypto-scraper/compare/v1.0.1...v1.0.2) (2021-10-12)
+
+
+### Bug Fixes
+
+* update npm release ([2ee0179](https://github.com/d0whc3r/telegram-crypto-scraper/commit/2ee0179c5766879fa18f284bae3a82a760f43d1d))
+
 ## [1.0.1](https://github.com/d0whc3r/telegram-crypto-scraper/compare/v1.0.0...v1.0.1) (2021-10-12)
 
 
