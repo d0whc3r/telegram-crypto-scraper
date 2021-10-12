@@ -1,5 +1,6 @@
 {
   "name": "@d0whc3r/telegram-crypto-scraper",
+  "private": true,
   "version": "1.2.0",
   "license": "MIT",
   "author": {
@@ -66,6 +67,7 @@
     "@semantic-release/commit-analyzer": "9.0.1",
     "@semantic-release/git": "10.0.0",
     "@semantic-release/github": "8.0.1",
+    "@semantic-release/npm": "8.0.0",
     "@semantic-release/release-notes-generator": "10.0.2",
     "@types/mkdirp": "1.0.2",
     "@types/node": "16.10.3",
@@ -103,10 +105,6 @@
     "**/*.ts": [
       "yarn format"
     ]
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org",
-    "access": "public"
   },
   "pkg": {
     "scripts": [],
