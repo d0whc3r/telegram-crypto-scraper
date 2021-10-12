@@ -28,11 +28,6 @@ function saveSession(session: string) {
 
 async function init() {
   if (!CLIENT) {
-    console.log({
-      API_ID: Config.API_ID,
-      API_HASH: Config.API_HASH,
-      PHONE: Config.PHONE
-    });
     const stringSession = new StringSession(getSession());
     CLIENT = new TelegramClient(stringSession, Config.API_ID, Config.API_HASH, { connectionRetries: 5 });
     await CLIENT.start({
