@@ -3,7 +3,7 @@ import { TotalList } from 'telegram/Helpers';
 import { Message } from 'telegram/tl/custom/message';
 import fs from 'fs';
 import path from 'path';
-import { Config } from './config';
+import { Config, formatDate } from './config';
 import mkdirp from 'mkdirp';
 
 type ParseOptions = {
@@ -61,7 +61,9 @@ enum Status {
 
 export class Parser {
   private regexInitial =
-    /(?<altposition>(Pair|Buy|Sell))[: \n]*?(?<pair>[\w/]+)[ ]*?[(?<position>\w)]+\nLeverage[: ]*?\w+ (?<leverage>\d+)x\nEntry(zone|[: ]*)*? (?<entry>[\d. -]+)\nTargets[: ]*?(?<tps>[\d. \w-]+)\nSL[: ]*?(?<sl>[\d.]+)/gi;
+    /(?<altposition>(Pair|Buy|Sell|Binance|Binance futures))*[\W\w\n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*[\W\w\n]*Leverage[: ]*?\w+ (?<leverage>\d+)x[\W\w\n]*Entry(zone|[: ]*)*? (?<entry>[\d. -]+)[\W\w\n]*Targets[: ]*?(?<tps>[\d. \w-]+)[\W\w\n]*SL[: ]*?(?<sl>[\d.]+)/gi;
+  // /(?<altposition>(Pair|Buy|Sell))*[: \n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*\nLeverage[: ]*?\w+ (?<leverage>\d+)x\nEntry(zone|[: ]*)*? (?<entry>[\d. -]+)\nTargets[: ]*?(?<tps>[\d. \w-]+)\nSL[: ]*?(?<sl>[\d.]+)/gi;
+  private regexEntry = /#(?<pair>[\w/]+) (All entry targets achieved|Entered entry zone)?.*\n(Average Entry Price|Period)*?:/gi;
   private regexTp = /#(?<pair>[\w/]+) Take-Profit target (?<tp>\d).*\nProfit[: ]*?(?<profit>[\d.]+%)/gi;
   private regexLastTp = /#(?<pair>[\w/]+) All take-profit targets achieved.*\nProfit[: ]*?(?<profit>[\d.]+%)/gi;
   private regexSl = /#(?<pair>[\w/]+) Stoploss .*\nLoss[: ]*?(?<loss>[\d.]+%)/gi;
@@ -88,15 +90,8 @@ export class Parser {
   }
 
   private getPosition(position: string) {
-    const pos = position.toUpperCase().replace('BUY', 'LONG').replace('SELL', 'SHORT');
+    const pos = position?.toUpperCase().replace('BUY', 'LONG').replace('SELL', 'SHORT');
     return Position.LONG === pos ? Position.LONG : Position.SHORT;
-  }
-
-  private formatDate(date?: Date) {
-    if (!date) {
-      return '';
-    }
-    return date.toISOString().split('.')[0].replace('T', ' ');
   }
 
   private initInfo(info: TrackingInfo) {
@@ -152,109 +147,182 @@ export class Parser {
     this.trackingPairs.track.set(key, { ...trackInfo, ...info, open: false } as TrackingInfo);
   }
 
-  // eslint-disable-next-line sonarjs/cognitive-complexity
+  private getMessageById(id: number) {
+    return this.messages.find((m) => m.id === id);
+  }
+
+  private stateInitial(originalId: number, info: Partial<TrackingInfo>) {
+    const msg = this.getMessageById(originalId);
+    if (!msg || !msg.message) {
+      console.error('Unknown message!', originalId, info);
+      return;
+    }
+    const { id, message, date: timeDate = 0 } = msg;
+    const date = new Date(timeDate * 1000);
+    this.regexInitial.lastIndex = 0;
+    const match = this.regexInitial.exec(message);
+    if (match?.length && match.groups) {
+      const { altposition, pair, position, leverage, entry, tps, sl } = match.groups;
+      const tpsPrice = tps
+        .split('-')
+        .map((x) => Number(x.trim()))
+        .filter(Boolean)
+        .filter((x, pos, arr) => arr.indexOf(x) === pos);
+      this.initInfo({
+        id,
+        entryDate: date,
+        pair: pair.replace(/[/#]+/g, ''),
+        position: this.getPosition(position || altposition),
+        tpsPrice,
+        leverage: +leverage,
+        entryPrice: +entry,
+        slPrice: +sl,
+        tps: new Array<boolean>(tpsPrice.length).fill(false),
+        tpsPercent: [],
+        sl: false,
+        open: true
+      });
+    } else {
+      console.error('Unrecognized message', { id, date, message });
+    }
+  }
+
+  private stateTp(msg: Message) {
+    const { message, date: timeDate = 0, isReply, replyTo } = msg;
+    if (!message) {
+      return;
+    }
+    const replyToMsgId = replyTo?.replyToMsgId || 0;
+    const date = new Date(timeDate * 1000);
+    this.regexTp.lastIndex = 0;
+    const match = this.regexTp.exec(message);
+    if (isReply && match?.length && match.groups) {
+      const { tp: textTp, profit } = match.groups;
+      const existing = this.getTrackInfo(replyToMsgId);
+      if (!existing || !existing.trackInfo) {
+        console.log('NOT FOUND REPLY (tp)', replyToMsgId, existing);
+        return;
+      }
+      const {
+        trackInfo: { tps, tpsPercent = [], tpsDate = [] }
+      } = existing;
+      const tp = +textTp - 1;
+      tps[+tp] = true;
+      tpsPercent[+tp] = parseFloat(profit);
+      tpsDate[+tp] = date;
+      this.updateInfo(replyToMsgId, {
+        tps,
+        tpsPercent,
+        tpsDate
+      });
+    }
+  }
+
+  private stateLastTp(msg: Message) {
+    const { id, message, date: timeDate = 0, isReply, replyTo } = msg;
+    if (!message) {
+      return;
+    }
+    const replyToMsgId = replyTo?.replyToMsgId || 0;
+    const date = new Date(timeDate * 1000);
+    this.regexLastTp.lastIndex = 0;
+    const match = this.regexLastTp.exec(message);
+    if (isReply && match?.length && match.groups) {
+      const { profit } = match.groups;
+      const existing = this.getTrackInfo(replyToMsgId);
+      if (!existing || !existing.trackInfo) {
+        console.log('NOT FOUND REPLY (last tp)', replyToMsgId, existing);
+        return;
+      }
+      const {
+        trackInfo: { tps, tpsPercent = [], tpsDate = [] }
+      } = existing;
+      const tp = tps.length - 1;
+      tps[+tp] = true;
+      tpsPercent[+tp] = parseFloat(profit);
+      tpsDate[+tp] = date;
+      this.updateInfo(replyToMsgId, {
+        tps,
+        tpsPercent,
+        tpsDate
+      });
+      this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
+    }
+  }
+
+  private stateSl(msg: Message) {
+    const { id, message, date: timeDate = 0, isReply, replyTo } = msg;
+    if (!message) {
+      return;
+    }
+    const replyToMsgId = replyTo?.replyToMsgId || 0;
+    const date = new Date(timeDate * 1000);
+    this.regexSl.lastIndex = 0;
+    const match = this.regexSl.exec(message);
+    if (isReply && match?.length && match.groups) {
+      const { loss } = match.groups;
+      this.updateInfo(replyToMsgId, {
+        sl: true,
+        slPercent: parseFloat(loss) * -1,
+        slDate: date
+      });
+      this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
+    }
+  }
+
+  private stateTpSl(msg: Message) {
+    const { id, message, date: timeDate = 0, isReply, replyTo } = msg;
+    if (!message) {
+      return;
+    }
+    const replyToMsgId = replyTo?.replyToMsgId || 0;
+    const date = new Date(timeDate * 1000);
+    this.regexTpSl.lastIndex = 0;
+    const match = this.regexTpSl.exec(message);
+    if (isReply && match?.length && match.groups) {
+      this.updateInfo(replyToMsgId, {
+        sl: true,
+        slDate: date
+      });
+      this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
+    }
+  }
+
+  private stateCancelled(msg: Message) {
+    const { id, message, date: timeDate = 0, isReply, replyTo } = msg;
+    if (!message) {
+      return;
+    }
+    const replyToMsgId = replyTo?.replyToMsgId || 0;
+    const date = new Date(timeDate * 1000);
+    this.regexCanceled.lastIndex = 0;
+    const match = this.regexCanceled.exec(message);
+    if (isReply && match?.length && match.groups) {
+      this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
+    }
+  }
+
   private parseMessages() {
     try {
       for (let i = this.messages.length - 1; i >= 0; i--) {
         const msg = this.messages[+i];
-        const { id, message, date: timeDate = 0, isReply, replyTo } = msg;
+        const { message, date: timeDate = 0, isReply, replyTo } = msg;
         const replyToMsgId = replyTo?.replyToMsgId || 0;
         const date = new Date(timeDate * 1000);
         if (message) {
-          this.regexInitial.lastIndex = 0;
-          let match = this.regexInitial.exec(message);
-          if (match?.length && match.groups) {
-            const { altposition, pair, position, leverage, entry, tps, sl } = match.groups;
-            const tpsPrice = tps
-              .split('-')
-              .map((x) => Number(x.trim()))
-              .filter(Boolean)
-              .filter((x, pos, arr) => arr.indexOf(x) === pos);
-            this.initInfo({
-              id,
-              entryDate: date,
-              pair: pair.replace(/[/#]+/g, ''),
-              position: this.getPosition(position || altposition),
-              tpsPrice,
-              leverage: +leverage,
-              entryPrice: +entry,
-              slPrice: +sl,
-              tps: new Array<boolean>(tpsPrice.length).fill(false),
-              tpsPercent: [],
-              sl: false,
-              open: true
+          this.regexEntry.lastIndex = 0;
+          const match = this.regexEntry.exec(message);
+          if (isReply && match?.length && match.groups) {
+            this.stateInitial(replyToMsgId, {
+              id: replyToMsgId,
+              entryDate: date
             });
           }
-          this.regexTp.lastIndex = 0;
-          match = this.regexTp.exec(message);
-          if (isReply && match?.length && match.groups) {
-            const { tp: textTp, profit } = match.groups;
-            const existing = this.getTrackInfo(replyToMsgId);
-            if (!existing || !existing.trackInfo) {
-              console.log('NOT FOUND REPLY (tp)', replyToMsgId, existing);
-              break;
-            }
-            const {
-              trackInfo: { tps, tpsPercent = [], tpsDate = [] }
-            } = existing;
-            const tp = +textTp - 1;
-            tps[+tp] = true;
-            tpsPercent[+tp] = parseFloat(profit);
-            tpsDate[+tp] = date;
-            this.updateInfo(replyToMsgId, {
-              tps,
-              tpsPercent,
-              tpsDate
-            });
-          }
-          this.regexLastTp.lastIndex = 0;
-          match = this.regexLastTp.exec(message);
-          if (isReply && match?.length && match.groups) {
-            const { profit } = match.groups;
-            const existing = this.getTrackInfo(replyToMsgId);
-            if (!existing || !existing.trackInfo) {
-              console.log('NOT FOUND REPLY (last tp)', replyToMsgId, existing);
-              break;
-            }
-            const {
-              trackInfo: { tps, tpsPercent = [], tpsDate = [] }
-            } = existing;
-            const tp = tps.length - 1;
-            tps[+tp] = true;
-            tpsPercent[+tp] = parseFloat(profit);
-            tpsDate[+tp] = date;
-            this.updateInfo(replyToMsgId, {
-              tps,
-              tpsPercent,
-              tpsDate
-            });
-            this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
-          }
-          this.regexSl.lastIndex = 0;
-          match = this.regexSl.exec(message);
-          if (isReply && match?.length && match.groups) {
-            const { loss } = match.groups;
-            this.updateInfo(replyToMsgId, {
-              sl: true,
-              slPercent: parseFloat(loss) * -1,
-              slDate: date
-            });
-            this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
-          }
-          this.regexTpSl.lastIndex = 0;
-          match = this.regexTpSl.exec(message);
-          if (isReply && match?.length && match.groups) {
-            this.updateInfo(replyToMsgId, {
-              sl: true,
-              slDate: date
-            });
-            this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
-          }
-          this.regexCanceled.lastIndex = 0;
-          match = this.regexCanceled.exec(message);
-          if (isReply && match?.length && match.groups) {
-            this.closeInfo(replyToMsgId, { closeDate: date, closedBy: id });
-          }
+          this.stateTp(msg);
+          this.stateLastTp(msg);
+          this.stateSl(msg);
+          this.stateTpSl(msg);
+          this.stateCancelled(msg);
         }
       }
     } catch (e) {
@@ -275,7 +343,6 @@ export class Parser {
   private calculateInfoProfits({ tps, tpsPercent = [], slPercent = 0 }: CalculateInfoProfitsType) {
     const allTps = tps.length;
     const archivedTps = tpsPercent.length;
-    // const slTps = allTps - (archivedTps + 1);
     const slTps = allTps === archivedTps || !archivedTps ? 1 : allTps - archivedTps;
     const tpsSum = tpsPercent.reduce((a, x) => a + x, 0);
     return Math.round((tpsSum / allTps + slPercent / slTps) * 10_000) / 10_000;
@@ -286,17 +353,20 @@ export class Parser {
       return Status.OPEN;
     }
     const lastTp = tps.lastIndexOf(true);
+    const allTps = tps.length;
     const tpNum = lastTp + 1;
-    let status: string;
+    let status = '';
+    if (reversed) {
+      status = `${Status.REVERSED} - `;
+    }
     if (lastTp >= 0) {
       if (sl) {
-        status = `${Status.SL_TP} ${tpNum}`;
+        status += `${Status.SL_TP} ${tpNum}/${allTps}`;
       } else if (tpNum === tps.length) {
-        status = `${Status.ALL_TPS} ${tpNum}`;
+        status += `${Status.ALL_TPS} ${tpNum}/${allTps}`;
+      } else {
+        status += `${Status.TP} ${tpNum}/${allTps}`;
       }
-      status = `${Status.TP} ${tpNum}`;
-    } else if (reversed) {
-      status = Status.REVERSED;
     } else if (slPercent) {
       status = Status.SL;
     } else {
@@ -319,7 +389,7 @@ export class Parser {
       .map(({ id, pair, position, leverage, entryDate, closeDate, tpsPercent, slPercent, tps, sl, open, reversed }) => {
         const { profit, status } = this.calculateInfo({ tps, sl, tpsPercent, slPercent, open, reversed });
         const duration = closeDate ? Math.round(((+closeDate - +entryDate) / 1000 / 60) * 100) / 100 : '';
-        let res = [id, this.formatDate(entryDate), this.formatDate(closeDate), duration, pair, position, status, leverage, profit];
+        let res = [id, formatDate(entryDate), formatDate(closeDate), duration, pair, position, status, leverage, profit];
         if (this.options.replaceDots) {
           res = res.map((x) => (typeof x === 'number' ? x.toString().replace('.', ',') : x));
         }
@@ -327,7 +397,7 @@ export class Parser {
       })
       .reverse();
     const msg = [header, ...result].join('\n');
-    const date = this.formatDate(new Date()).replace(/ /g, '_');
+    const date = formatDate(new Date()).replace(/ /g, '_');
     const fileName = `${this.channelName.replace(/ /g, '_')}__${date}.csv`;
     const filePath = path.join(Config.CSV_PATH, fileName);
     mkdirp.sync(path.dirname(filePath));

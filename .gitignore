@@ -5,3 +5,5 @@ yarn-error.log
 zips/
 csv/
 dump/
+dist/
+telegram-crypto-scraper*

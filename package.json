@@ -1,12 +1,47 @@
 {
-  "name": "telegram-scraper",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "@d0whc3r/telegram-crypto-scraper",
+  "version": "1.2.0",
   "license": "MIT",
+  "author": {
+    "email": "d0whc3r@gmail.com",
+    "name": "d0whc3r",
+    "url": "https://github.com/d0whc3r"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d0whc3r/telegram-crypto-scraper.git"
+  },
+  "bin": {
+    "telegram-crypto-scraper": "./dist/telegram-crypto-scraper.cjs.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/telegram-crypto-scraper.cjs.js",
+  "module": "dist/telegram-crypto-scraper.es.mjs",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "node",
+    "telegram",
+    "crypto",
+    "scraper",
+    "cornix",
+    "profit",
+    "btc"
+  ],
   "scripts": {
-    "start": "dotenv -e .env -- node --loader ts-node/esm src/main.ts",
-    "price": "dotenv -e .env -- node --loader ts-node/esm src/price.ts",
-    "price2": "dotenv -e .env -- node --loader ts-node/esm src/price2.ts",
+    "start": "dotenv -e .env -- node --loader ts-node/esm src/index.ts",
+    "start:empty": "node --loader ts-node/esm src/index.ts",
+    "-- BUILD --": "-------------------------------------------------------------------------------------------------------",
+    "build:clean": "rimraf dist bin",
+    "build:dist": "rollup -c",
+    "build:dts": "dts-bundle-generator -o dist/index.d.ts src/index.ts",
+    "build:pkg": "pkg .",
+    "build:pkg:linux": "pkg -t node14-linux-x64 -o telegram-crypto-scraper ./dist/telegram-crypto-scraper.cjs.js",
+    "build:pkg:windows": "pkg -t node14-win-x64 -o telegram-crypto-scraper.exe ./dist/telegram-crypto-scraper.cjs.js",
+    "build:pkg:macos": "pkg -t node14-macos-x64 -o telegram-crypto-scraper ./dist/telegram-crypto-scraper.cjs.js",
+    "build:base": "yarn build:clean && run-p build:dist build:dts",
+    "build": "run-s build:base build:pkg",
     "-- HELPERS --": "-------------------------------------------------------------------------------------------------------",
     "prepare": "husky install",
     "ci": "yarn clean && yarn install",
@@ -17,39 +52,44 @@
     "lint:fix": "yarn eslint --fix"
   },
   "dependencies": {
-    "@exodus/prices": "0.0.2",
-    "adm-zip": "0.5.9",
-    "axios": "0.22.0",
-    "cryptocompare": "1.0.0",
-    "csv-parse": "4.16.3",
+    "commander": "8.2.0",
     "input": "1.0.1",
     "mkdirp": "1.0.4",
-    "node-fetch": "3.0.0",
     "telegram": "1.9.6"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.15.8",
-    "@commitlint/cli": "13.2.0",
+    "@commitlint/cli": "13.2.1",
     "@commitlint/config-conventional": "13.2.0",
+    "@rollup/plugin-json": "4.1.0",
+    "@rollup/plugin-node-resolve": "13.0.5",
     "@types/adm-zip": "0.4.34",
     "@types/mkdirp": "1.0.2",
     "@types/node": "16.10.3",
-    "@typescript-eslint/eslint-plugin": "4.33.0",
-    "@typescript-eslint/parser": "4.33.0",
+    "@typescript-eslint/eslint-plugin": "5.0.0",
+    "@typescript-eslint/parser": "5.0.0",
+    "builtin-modules": "3.2.0",
     "dotenv-cli": "4.0.0",
-    "eslint": "7.32.0",
+    "dts-bundle-generator": "5.9.0",
+    "esbuild": "0.13.4",
+    "eslint": "8.0.0",
     "eslint-config-prettier": "8.3.0",
-    "eslint-plugin-import": "2.24.2",
+    "eslint-plugin-import": "2.25.1",
     "eslint-plugin-prettier": "4.0.0",
     "eslint-plugin-security": "1.4.0",
     "eslint-plugin-sonarjs": "0.10.0",
     "husky": "7.0.2",
-    "lint-staged": "11.2.0",
+    "lint-staged": "11.2.3",
     "npm-run-all": "4.1.5",
+    "pkg": "5.3.3",
     "prettier": "2.4.1",
     "pretty-quick": "3.1.1",
     "rimraf": "3.0.2",
-    "ts-node": "10.2.1",
+    "rollup": "2.58.0",
+    "rollup-plugin-auto-external": "2.0.0",
+    "rollup-plugin-esbuild": "4.5.0",
+    "rollup-plugin-node-builtins": "2.1.2",
+    "ts-node": "10.3.0",
     "typescript": "4.4.3"
   },
   "engines": {
@@ -58,6 +98,19 @@
   "lint-staged": {
     "**/*.ts": [
       "yarn format"
+    ]
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "pkg": {
+    "scripts": [],
+    "assets": [
+      "node_modules/telegram/**"
+    ],
+    "targets": [
+      "node14-linux-x64"
     ]
   }
 }
