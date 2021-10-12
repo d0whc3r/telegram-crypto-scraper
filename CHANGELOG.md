@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/d0whc3r/telegram-crypto-scraper/compare/v1.0.0...v1.0.1) (2021-10-12)
+
+
+### Bug Fixes
+
+* upload artifacts to release ([7f365e2](https://github.com/d0whc3r/telegram-crypto-scraper/commit/7f365e2e89f27da8b4e6a4dc5e7effbe09440cc6))
+
 # 1.0.0 (2021-10-12)
 
 
