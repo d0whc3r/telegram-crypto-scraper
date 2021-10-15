@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/d0whc3r/telegram-crypto-scraper/compare/v1.0.3...v1.0.4) (2021-10-15)
+
+
+### Bug Fixes
+
+* update regex to detect initial messages ([1ce783c](https://github.com/d0whc3r/telegram-crypto-scraper/commit/1ce783c49e0a5cb3c472f462c7ad982ddab4e127))
+
 ## [1.0.3](https://github.com/d0whc3r/telegram-crypto-scraper/compare/v1.0.2...v1.0.3) (2021-10-15)
 
 
