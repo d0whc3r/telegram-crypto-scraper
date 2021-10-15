@@ -62,8 +62,8 @@ enum Status {
 
 export class Parser {
   private regexInitial =
-    /(?<altposition>(Pair|Buy|Sell|Binance|Binance futures))*[\W\w\n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*[\W\w\n]*Leverage[: ]*?\w+ (?<leverage>\d+)x[\W\w\n]*Entry(zone|[: ]*)*? (?<entry>[\d. -]+)[\W\w\n]*Targets[: ]*?(?<tps>[\d. \w-]+)[\W\w\n]*SL[: ]*?(?<sl>[\d.]+)/gi;
-  // /(?<altposition>(Pair|Buy|Sell))*[: \n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*\nLeverage[: ]*?\w+ (?<leverage>\d+)x\nEntry(zone|[: ]*)*? (?<entry>[\d. -]+)\nTargets[: ]*?(?<tps>[\d. \w-]+)\nSL[: ]*?(?<sl>[\d.]+)/gi;
+   // /(?<altposition>(Pair|Buy|Sell|Binance|Binance futures))*[\W\w\n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*[\W\w\n]*Leverage[: ]*?\w+ (?<leverage>\d+)x[\W\w\n]*Entry(zone|[: ]*)*? (?<entry>[\d. -]+)[\W\w\n]*Targets[: ]*?(?<tps>[\d. \w-]+)[\W\w\n]*SL[: ]*?(?<sl>[\d.]+)/gi;
+    /(?<altposition>(Pair|Buy|Sell|Binance|Binance futures))*[: \n]*?(?<pair>[\w/]+)[ ]*?(?<position>\w+)*\nLeverage[: ]*?\w+ (?<leverage>\d+)x\nEntry(zone|[: ]*)*? (?<entry>[\d. -]+)\nTargets[: ]*?(?<tps>[\d. \w-]+)\nSL[: ]*?(?<sl>[\d.]+)/gi;
   private regexEntry = /#(?<pair>[\w/]+) (All entry targets achieved|Entered entry zone)?.*\n(Average Entry Price|Period)*?:/gi;
   private regexTp = /#(?<pair>[\w/]+) Take-Profit target (?<tp>\d).*\nProfit[: ]*?(?<profit>[\d.]+%)/gi;
   private regexLastTp = /#(?<pair>[\w/]+) All take-profit targets achieved.*\nProfit[: ]*?(?<profit>[\d.]+%)/gi;
