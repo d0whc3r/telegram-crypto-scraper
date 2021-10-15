@@ -6,6 +6,7 @@ import { Message } from 'telegram/tl/custom/message';
 import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';
+import { EOL } from 'os';
 
 let CLIENT: TelegramClient;
 
@@ -68,13 +69,13 @@ function generateCsv(content: ExtractDataType[]) {
       }
       return line;
     })
-    .join('\n');
+    .join(EOL);
   const header = '"ID","Date","Exchange","Client","Channel","Symbol","Status","Reason","Percent","BTC","USD"';
-  const date = formatDate(new Date()).replace(/ /g, '_');
+  const date = formatDate(new Date()).replace(/ /g, '_').replace(/:/g, '');
   const filePath = path.join(Config.CSV_PATH, `cornix-out__${date}.csv`);
   mkdirp.sync(path.dirname(filePath));
   // eslint-disable-next-line security/detect-non-literal-fs-filename
-  fs.writeFileSync(filePath, [header, formattedText].join('\n'));
+  fs.writeFileSync(filePath, [header, formattedText].join(EOL));
   console.log('csv:', filePath);
 }
 

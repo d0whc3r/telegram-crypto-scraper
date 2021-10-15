@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { Config, formatDate } from './config';
 import mkdirp from 'mkdirp';
+import { EOL } from 'os';
 
 type ParseOptions = {
   replaceDots?: boolean;
@@ -396,8 +397,8 @@ export class Parser {
         return `"${res.join('","')}"`;
       })
       .reverse();
-    const msg = [header, ...result].join('\n');
-    const date = formatDate(new Date()).replace(/ /g, '_');
+    const msg = [header, ...result].join(EOL);
+    const date = formatDate(new Date()).replace(/ /g, '_').replace(/:/g, '');
     const fileName = `${this.channelName.replace(/ /g, '_')}__${date}.csv`;
     const filePath = path.join(Config.CSV_PATH, fileName);
     mkdirp.sync(path.dirname(filePath));
