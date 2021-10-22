@@ -52,7 +52,7 @@
     "lint:fix": "yarn eslint --fix"
   },
   "dependencies": {
-    "commander": "8.2.0",
+    "commander": "8.3.0",
     "input": "1.0.1",
     "mkdirp": "1.0.4",
     "telegram": "1.9.6"
