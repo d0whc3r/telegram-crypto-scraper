@@ -90,7 +90,7 @@
     "prettier": "2.4.1",
     "pretty-quick": "3.1.1",
     "rimraf": "3.0.2",
-    "rollup": "2.58.0",
+    "rollup": "2.79.2",
     "rollup-plugin-auto-external": "2.0.0",
     "rollup-plugin-esbuild": "4.5.0",
     "rollup-plugin-node-builtins": "2.1.2",
