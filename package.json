@@ -58,7 +58,7 @@
     "telegram": "1.9.6"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.15.8",
+    "@babel/eslint-parser": "7.25.9",
     "@commitlint/cli": "13.2.1",
     "@commitlint/config-conventional": "13.2.0",
     "@rollup/plugin-json": "4.1.0",
