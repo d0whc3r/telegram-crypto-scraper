@@ -92,7 +92,7 @@
     "rimraf": "3.0.2",
     "rollup": "2.58.0",
     "rollup-plugin-auto-external": "2.0.0",
-    "rollup-plugin-esbuild": "4.5.0",
+    "rollup-plugin-esbuild": "4.10.3",
     "rollup-plugin-node-builtins": "2.1.2",
     "semantic-release": "18.0.0",
     "ts-node": "10.3.0",
